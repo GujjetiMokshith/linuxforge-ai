@@ -82,3 +82,21 @@ Instructions:
     }
   }
 }
+
+export async function verifyKey(apiKey: string): Promise<boolean> {
+  const openai = new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey,
+    defaultHeaders: {
+      'HTTP-Referer': 'https://linuxforge.ai',
+      'X-Title': 'LinuxForge',
+    }
+  });
+
+  try {
+    await openai.models.list();
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
