@@ -1,16 +1,29 @@
 {
   "name": "linuxforge-ai",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AI agent for making Linux easier",
+  "main": "dist/main.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/GujjetiMokshith/linuxforge-ai.git"
   },
-  "keywords": [],
+  "keywords": [
+    "linux",
+    "ai",
+    "cli",
+    "assistant",
+    "terminal",
+    "openrouter"
+  ],
+  "author": "Gujjeti Mokshith",
+  "license": "MIT",
+  "preferGlobal": true,
   "type": "module",
   "bugs": {
     "url": "https://github.com/GujjetiMokshith/linuxforge-ai/issues"
@@ -19,6 +32,8 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "boxen": "^8.0.1",
+    "chalk": "^6.0.0",
+    "chalk-animation": "^2.0.3",
     "cli-highlight": "^2.1.11",
     "commander": "^15.0.0",
     "gradient-string": "^3.0.0",
@@ -28,12 +43,13 @@
     "string-width": "^8.2.2"
   },
   "devDependencies": {
+    "@types/chalk-animation": "^1.6.3",
     "@types/gradient-string": "^1.1.6",
     "@types/node": "^26.4.1",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   },
   "bin": {
-    "linuxforge": "main.ts"
+    "linuxforge": "dist/main.js"
   }
 }
