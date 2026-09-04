@@ -1,6 +1,10 @@
 <div align="center">
   <h1>LinuxForge AI 🚀</h1>
   <p><strong>Your Intelligent, Kinetic Terminal Assistant for Linux</strong></p>
+  
+  [![npm version](https://img.shields.io/npm/v/linuxforge-ai.svg?style=flat-square)](https://www.npmjs.com/package/linuxforge-ai)
+  [![npm downloads](https://img.shields.io/npm/dt/linuxforge-ai.svg?style=flat-square)](https://www.npmjs.com/package/linuxforge-ai)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 </div>
 
 LinuxForge is an expert AI assistant framework designed specifically to make managing Linux easier. It operates directly in your terminal, transforming natural language goals into precise bash commands, executing them, and automatically analyzing the output in a continuous loop until your goal is fully achieved.
