@@ -20,8 +20,6 @@ export async function executeCommand(command: string): Promise<CommandResult> {
     let stdout = '';
     let stderr = '';
     
-    console.log(pc.dim('\n  Terminal Output:'));
-    
     // To make output stream nicely in the UI, we'll prefix lines
     let stdoutBuffer = '';
     let stderrBuffer = '';

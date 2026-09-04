@@ -1,29 +1,22 @@
 import pc from 'picocolors';
-import { spinner as clackSpinner, note } from '@clack/prompts';
 import { SystemInfo } from './system.js';
 import { Activity } from './config.js';
 import ora, { Ora } from 'ora';
-import gradient from 'gradient-string';
 import { highlight } from 'cli-highlight';
+import * as readline from 'readline';
 
-// Custom RGB colors
-const orange = (text: string) => `\x1b[38;2;255;165;0m${text}\x1b[39m`;
-const white = (text: string) => `\x1b[37m${text}\x1b[39m`;
 const grey = (text: string) => `\x1b[90m${text}\x1b[39m`;
 
-// Helper to strip ANSI codes to get visual length
 function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
-// Helper to pad strings visually
 function pad(str: string, length: number, fill = ' '): string {
   const visualLen = stripAnsi(str).length;
   if (visualLen >= length) return str;
   return str + fill.repeat(length - visualLen);
 }
 
-// Format relative time
 function timeAgo(dateString: string): string {
   const diff = Date.now() - new Date(dateString).getTime();
   const mins = Math.floor(diff / 60000);
@@ -39,190 +32,108 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
   const LEFT_WIDTH = 34;
   const RIGHT_WIDTH = 43; // 80 - 34 - 3 (borders)
   
-  // Dashboard Title
-  const title = ` linuxforge v2.0.0 `;
-  const topBorder = orange(`╭${'┄'.repeat(3)}${title}${'┄'.repeat(TOTAL_WIDTH - 5 - title.length)}╮`);
-  const bottomBorder = orange(`╰${'┄'.repeat(TOTAL_WIDTH - 2)}╯`);
+  const title = ` LinuxForge v2.0.0 `;
+  const topBorder = grey(`╭╌╌${title}${'╌'.repeat(TOTAL_WIDTH - 5 - title.length)}╮`);
+  const bottomBorder = grey(`╰${'╌'.repeat(TOTAL_WIDTH - 2)}╯`);
 
-  // Left Column Content
   const username = process.env.USER || 'User';
-  const greeting = orange(`Welcome back ${username}!`);
   
-  // 8-bit Alien Graphic (5 lines) in orange
-  const alien = [
-    orange('  ▄▄████▄▄  '),
-    orange('▄██████████▄'),
-    orange('██▄██████▄██'),
-    orange(' ▄▀ ▄▄▄▄ ▀▄ '),
-    orange('▀   ▀  ▀   ▀')
-  ];
-
-  const now = new Date();
-  const timeStr = orange(`Time: ${now.toLocaleTimeString()}`);
-  const osStr = orange(`OS: ${info.distribution || info.platform} ${info.distroVersion || info.release}`);
-  const archStr = orange(`Arch: ${info.architecture} | ${info.cpus} CPUs`);
-
   const leftLines = [
-    '',
-    pad(`  ${greeting}`, LEFT_WIDTH),
-    '',
-    ...alien.map(line => pad(`         ${line}`, LEFT_WIDTH)),
-    '',
-    pad(`  ${timeStr}`, LEFT_WIDTH),
-    pad(`  ${osStr}`, LEFT_WIDTH),
-    pad(`  ${archStr}`, LEFT_WIDTH),
-    ''
+    `  Welcome back ${username}!`,
+    `  OS: ${info.distribution || info.platform} ${info.distroVersion || info.release} | ${info.architecture}`,
+    `  Model: OpenRouter`, // Assuming standard for now
+    `  Dir: ${process.cwd()}`
   ];
 
-  // Right Column Content
   let rightLines = [
-    pad(` ${orange('Recent activity')}`, RIGHT_WIDTH),
-    ''
+    ` Recent Activity`
   ];
 
-  const recentActivities = [...activities].reverse().slice(0, 3);
+  const recentActivities = [...activities].reverse().slice(0, 2);
   if (recentActivities.length === 0) {
-    rightLines.push(pad(`   ${grey('No recent activity')}`, RIGHT_WIDTH));
-    rightLines.push(pad('', RIGHT_WIDTH));
-    rightLines.push(pad('', RIGHT_WIDTH));
+    rightLines.push(grey('  No recent activity'));
+    rightLines.push('');
   } else {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       if (recentActivities[i]) {
-        const timeLog = grey(pad(timeAgo(recentActivities[i].timestamp), 8));
+        const timeLog = grey(pad(timeAgo(recentActivities[i].timestamp), 7));
         let actionStr = recentActivities[i].action;
         if (actionStr.length > RIGHT_WIDTH - 15) {
           actionStr = actionStr.substring(0, RIGHT_WIDTH - 18) + '...';
         }
-        rightLines.push(pad(`   ${timeLog} ${white(actionStr)}`, RIGHT_WIDTH));
+        rightLines.push(` ${timeLog} ${actionStr}`);
       } else {
-        rightLines.push(pad('', RIGHT_WIDTH));
+        rightLines.push('');
       }
     }
   }
 
-  rightLines.push(pad('', RIGHT_WIDTH));
-  rightLines.push(pad(` ${orange('┄'.repeat(RIGHT_WIDTH - 2))}`, RIGHT_WIDTH));
-  rightLines.push(pad(` ${orange('Available Commands')}`, RIGHT_WIDTH));
-  rightLines.push('');
-  rightLines.push(pad(`   ${white('/key')}    ${grey('Update OpenRouter API Key')}`, RIGHT_WIDTH));
-  rightLines.push(pad(`   ${white('/clear')}  ${grey('Clear terminal history')}`, RIGHT_WIDTH));
-  rightLines.push(pad(`   ${white('/exit')}   ${grey('Exit LinuxForge')}`, RIGHT_WIDTH));
-  rightLines.push(pad('', RIGHT_WIDTH));
+  rightLines.push(grey('  ... /help for commands'));
 
-  // Merge Columns
   console.log();
   console.log(topBorder);
   
   const maxLines = Math.max(leftLines.length, rightLines.length);
   for (let i = 0; i < maxLines; i++) {
-    const l = leftLines[i] || pad('', LEFT_WIDTH);
-    const r = rightLines[i] || pad('', RIGHT_WIDTH);
-    console.log(orange('┊') + l + ' ' + r + orange('┊'));
+    const l = pad(leftLines[i] || '', LEFT_WIDTH);
+    const r = pad(rightLines[i] || '', RIGHT_WIDTH);
+    console.log(grey('┆') + l + grey(' ┆ ') + r + grey('┆'));
   }
   
   console.log(bottomBorder);
-  console.log(grey('─'.repeat(TOTAL_WIDTH)));
+  console.log();
 }
 
-// Special Effects Engine
-
-export interface ForgingSpinner {
-  stop: (msg?: string) => void;
-  succeed: (msg?: string) => void;
-  fail: (msg?: string) => void;
-}
-
-export function startForgingSpinner(): ForgingSpinner {
-  const forgeSequence = [
-    { text: pc.gray('Inspecting materials...'), color: 'gray' },
-    { text: orange('Smelting logic...'), color: 'yellow' },
-    { text: pc.red('Forging command...'), color: 'red' },
-    { text: pc.cyan('Quenching...'), color: 'cyan' },
-  ];
-  
-  const spinner = ora({
-    text: forgeSequence[0].text,
+export function startForgingSpinner(): Ora {
+  // Silent minimal spinner that completely disappears on stop
+  return ora({
+    text: pc.dim('Thinking...'),
     spinner: 'dots',
-    color: forgeSequence[0].color as any
+    color: 'gray'
   }).start();
-
-  let phase = 0;
-  const interval = setInterval(() => {
-    phase = (phase + 1) % forgeSequence.length;
-    spinner.text = forgeSequence[phase].text;
-    spinner.color = forgeSequence[phase].color as any;
-  }, 1500);
-
-  return {
-    stop: (msg?: string) => {
-      clearInterval(interval);
-      spinner.stopAndPersist({ text: msg });
-    },
-    succeed: (msg: string = pc.green('Forged successfully.')) => {
-      clearInterval(interval);
-      spinner.succeed(msg);
-    },
-    fail: (msg?: string) => {
-      clearInterval(interval);
-      spinner.fail(pc.red(msg || 'Forging failed.'));
-    }
-  };
 }
 
 export async function typewriterPrint(text: string): Promise<void> {
-  const gradientText = gradient(['#ff0000', '#ffff00'])(text);
-  // Due to gradient coloring character by character breaking ANSI,
-  // we will just print the un-gradiented text character by character 
-  // or print chunks if we want gradient. Let's do raw white typewriter 
-  // with a fire gradient header instead.
-  
-  console.log(gradient(['#ff0000', '#ffff00'])('  ✧ Explanation ✧'));
-  
-  process.stdout.write('  ');
-  for (let i = 0; i < text.length; i++) {
-    process.stdout.write(pc.white(text[i]));
-    
-    // Formatting newlines properly with indentation
-    if (text[i] === '\n') {
-      process.stdout.write('  ');
+  const lines = text.split('\n');
+  for (let l = 0; l < lines.length; l++) {
+    process.stdout.write('  ');
+    const line = lines[l];
+    for (let i = 0; i < line.length; i++) {
+      process.stdout.write(pc.white(line[i]));
+      const delay = Math.floor(Math.random() * 15) + 5; // Fast typing
+      await new Promise(r => setTimeout(r, delay));
     }
-    
-    const delay = Math.floor(Math.random() * 20) + 10; // 10-30ms
-    await new Promise(r => setTimeout(r, delay));
+    console.log();
   }
-  console.log('\n');
+  console.log(); // extra newline for padding
 }
 
 export async function displayAnswer(answer: string): Promise<void> {
-  console.log(gradient(['#00ff00', '#00ffff'])('  ✧ Answer ✧'));
-  
-  process.stdout.write('  ');
-  for (let i = 0; i < answer.length; i++) {
-    process.stdout.write(pc.white(answer[i]));
-    
-    // Formatting newlines properly with indentation
-    if (answer[i] === '\n') {
-      process.stdout.write('  ');
-    }
-    
-    const delay = Math.floor(Math.random() * 20) + 10;
-    await new Promise(r => setTimeout(r, delay));
-  }
-  console.log('\n');
+  // Use same typewriter for answer, no noisy headers
+  await typewriterPrint(answer);
 }
 
 export function displayCommandBlock(command: string) {
   const highlighted = highlight(command, { language: 'bash', ignoreIllegals: true });
-  
-  console.log(grey('  Command:'));
-  console.log(orange('  ┃ '));
-  // Replace newlines to maintain the block border
-  const blockCommand = highlighted.split('\n').map(line => `${orange('  ┃ ')} ${line}`).join('\n');
-  console.log(blockCommand);
-  console.log(orange('  ┃ '));
-  console.log();
+  console.log(`  ${pc.dim('$')} ${highlighted}\n`);
 }
 
-export function createSpinner() {
-  return clackSpinner();
+export function inlineConfirm(message: string, defaultYes = true): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    const prompt = defaultYes ? '[Y/n]' : '[y/N]';
+    rl.question(`  ${message} ${pc.dim(prompt)} `, (answer) => {
+      rl.close();
+      const cleaned = answer.trim().toLowerCase();
+      if (cleaned === '') {
+        resolve(defaultYes);
+      } else {
+        resolve(cleaned === 'y' || cleaned === 'yes');
+      }
+    });
+  });
 }
