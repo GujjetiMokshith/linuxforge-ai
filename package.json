@@ -1,0 +1,34 @@
+{
+  "name": "linuxforge-ai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GujjetiMokshith/linuxforge-ai.git"
+  },
+  "keywords": [],
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/GujjetiMokshith/linuxforge-ai/issues"
+  },
+  "homepage": "https://github.com/GujjetiMokshith/linuxforge-ai#readme",
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "boxen": "^8.0.1",
+    "commander": "^15.0.0",
+    "openai": "^7.10.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "bin": {
+    "linuxforge": "main.ts"
+  }
+}
