@@ -2,9 +2,11 @@ import OpenAI from 'openai';
 import { SystemInfo } from './system.js';
 
 export interface AIResponse {
-  explanation: string;
+  explanation: string | null;
   command: string | null;
+  answer: string | null;
   isComplete: boolean;
+  is_destructive: boolean;
 }
 
 export class AIAgent {
@@ -32,16 +34,18 @@ ${JSON.stringify(systemInfo, null, 2)}
 
 Instructions:
 1. Analyze the user's goal and the system specifications.
-2. Determine the next step required to achieve the goal.
-3. Provide a brief explanation of what you are doing and why.
-4. Provide the exact bash shell command to run.
-5. If the goal is fully achieved, set "isComplete" to true and leave the command empty/null.
-6. Do NOT suggest interactive commands that require TTY input (like 'vi' or interactive prompts) unless you can pass flags to automate them (e.g., -y).
+2. Determine if a shell command is needed. If you just need to directly answer a question (e.g., "what is 5+5"), provide your response in the "answer" field, leave "command" and "explanation" null, and set "isComplete" to true.
+3. If a shell command is needed, provide a brief explanation of what you are doing in "explanation" and the exact bash shell command in "command".
+4. If the goal is fully achieved after reviewing command output, you can provide a final summary in the "answer" field and set "isComplete" to true.
+5. Do NOT suggest interactive commands that require TTY input (like 'vi' or interactive prompts) unless you can pass flags to automate them (e.g., -y).
+6. Evaluate if the command modifies system files, deletes data, or requires root privileges (like sudo or rm -rf). If it does, set "is_destructive" to true.
 7. You MUST respond with a valid JSON object matching the following structure exactly:
 {
-  "explanation": "string",
+  "explanation": "string | null",
   "command": "string | null",
-  "isComplete": boolean
+  "answer": "string | null",
+  "isComplete": boolean,
+  "is_destructive": boolean
 }`;
 
     this.messages.push({

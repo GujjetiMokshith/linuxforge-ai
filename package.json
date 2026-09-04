@@ -19,12 +19,16 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "boxen": "^8.0.1",
+    "cli-highlight": "^2.1.11",
     "commander": "^15.0.0",
+    "gradient-string": "^3.0.0",
     "openai": "^7.10.0",
+    "ora": "^9.4.1",
     "picocolors": "^1.1.1",
     "string-width": "^8.2.2"
   },
   "devDependencies": {
+    "@types/gradient-string": "^1.1.6",
     "@types/node": "^26.4.1",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"

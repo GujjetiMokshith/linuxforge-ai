@@ -10,20 +10,6 @@ export interface CommandResult {
 }
 
 export async function executeCommand(command: string): Promise<CommandResult> {
-  const shouldRun = await confirm({
-    message: `Do you want to run this command?`,
-    initialValue: true,
-  });
-
-  if (!shouldRun || typeof shouldRun === 'symbol') {
-    return {
-      stdout: '',
-      stderr: '',
-      exitCode: null,
-      cancelled: true
-    };
-  }
-
   return new Promise((resolve) => {
     // We use bash -c to support pipes and shell builtins
     const child = spawn('bash', ['-c', command], {
@@ -33,18 +19,47 @@ export async function executeCommand(command: string): Promise<CommandResult> {
 
     let stdout = '';
     let stderr = '';
+    
+    console.log(pc.dim('\n  Terminal Output:'));
+    
+    // To make output stream nicely in the UI, we'll prefix lines
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
 
     child.stdout?.on('data', (data) => {
-      process.stdout.write(pc.dim(data.toString()));
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      
+      // Stream with border
+      const lines = chunk.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        stdoutBuffer += lines[i];
+        if (i < lines.length - 1) {
+          process.stdout.write(pc.dim('  │ ') + pc.dim(stdoutBuffer) + '\n');
+          stdoutBuffer = '';
+        }
+      }
     });
 
     child.stderr?.on('data', (data) => {
-      process.stderr.write(pc.red(data.toString()));
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      
+      const lines = chunk.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        stderrBuffer += lines[i];
+        if (i < lines.length - 1) {
+          process.stderr.write(pc.red('  │ ') + pc.red(stderrBuffer) + '\n');
+          stderrBuffer = '';
+        }
+      }
     });
 
     child.on('close', (code) => {
+      // Flush remaining buffers
+      if (stdoutBuffer) process.stdout.write(pc.dim('  │ ') + pc.dim(stdoutBuffer) + '\n');
+      if (stderrBuffer) process.stderr.write(pc.red('  │ ') + pc.red(stderrBuffer) + '\n');
+      
       resolve({
         stdout,
         stderr,

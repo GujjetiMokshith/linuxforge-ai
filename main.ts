@@ -2,11 +2,11 @@
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, displayExplanation, displayCommand, createSpinner } from './src/ui.js';
+import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer } from './src/ui.js';
 import { AIAgent, verifyKey } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
-import { text, isCancel, cancel, note, spinner as clackSpinner } from '@clack/prompts';
+import { text, isCancel, cancel, note, spinner as clackSpinner, confirm } from '@clack/prompts';
 import pc from 'picocolors';
 
 const program = new Command();
@@ -121,21 +121,24 @@ program
         await addActivity(`Goal: ${goalStr}`);
 
         while (!isComplete) {
-          const s = createSpinner();
-          s.start('Thinking...');
+          const s = startForgingSpinner();
           
           let response;
           try {
             response = await agent.sendMessage(currentMessage);
           } catch (error: any) {
-            s.stop('Failed to get response from AI');
+            s.fail('Failed to get response from AI');
             console.error(pc.red(error.message));
             break;
           }
-          s.stop('Response received');
+          s.succeed();
 
           if (response.explanation) {
-            displayExplanation(response.explanation);
+            await typewriterPrint(response.explanation);
+          }
+          
+          if (response.answer) {
+            await displayAnswer(response.answer);
           }
 
           if (response.isComplete) {
@@ -145,14 +148,31 @@ program
           }
 
           if (response.command) {
-            displayCommand(response.command);
+            displayCommandBlock(response.command);
             
-            const result = await executeCommand(response.command);
-            
-            if (result.cancelled) {
+            // Execution Gate
+            let shouldRun;
+            if (response.is_destructive) {
+              // Terminal bell \x07
+              process.stdout.write('\x07');
+              console.log(pc.bgRed(pc.white(' ⚠ DANGER: This command modifies system files. ')));
+              shouldRun = await confirm({
+                message: pc.red('Execute this destructive command?'),
+                initialValue: false,
+              });
+            } else {
+              shouldRun = await confirm({
+                message: 'Execute this command?',
+                initialValue: true,
+              });
+            }
+
+            if (!shouldRun || isCancel(shouldRun)) {
               note(pc.yellow('Operation cancelled by user.'));
               break;
             }
+
+            const result = await executeCommand(response.command);
 
             await addActivity(`Ran: ${response.command}`);
             // Update activities in memory to immediately reflect on next clear

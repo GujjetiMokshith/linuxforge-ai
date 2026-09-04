@@ -2,6 +2,9 @@ import pc from 'picocolors';
 import { spinner as clackSpinner, note } from '@clack/prompts';
 import { SystemInfo } from './system.js';
 import { Activity } from './config.js';
+import ora, { Ora } from 'ora';
+import gradient from 'gradient-string';
+import { highlight } from 'cli-highlight';
 
 // Custom RGB colors
 const orange = (text: string) => `\x1b[38;2;255;165;0m${text}\x1b[39m`;
@@ -114,7 +117,6 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
   for (let i = 0; i < maxLines; i++) {
     const l = leftLines[i] || pad('', LEFT_WIDTH);
     const r = rightLines[i] || pad('', RIGHT_WIDTH);
-    // Middle separator using dotted line
     console.log(orange('┊') + l + ' ' + r + orange('┊'));
   }
   
@@ -122,12 +124,103 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
   console.log(grey('─'.repeat(TOTAL_WIDTH)));
 }
 
-export function displayExplanation(explanation: string) {
-  note(pc.italic(white(explanation)), 'Explanation');
+// Special Effects Engine
+
+export interface ForgingSpinner {
+  stop: (msg?: string) => void;
+  succeed: (msg?: string) => void;
+  fail: (msg?: string) => void;
 }
 
-export function displayCommand(command: string) {
-  console.log(`\n  ${pc.bold(pc.green('$'))} ${pc.bold(white(command))}\n`);
+export function startForgingSpinner(): ForgingSpinner {
+  const forgeSequence = [
+    { text: pc.gray('Inspecting materials...'), color: 'gray' },
+    { text: orange('Smelting logic...'), color: 'yellow' },
+    { text: pc.red('Forging command...'), color: 'red' },
+    { text: pc.cyan('Quenching...'), color: 'cyan' },
+  ];
+  
+  const spinner = ora({
+    text: forgeSequence[0].text,
+    spinner: 'dots',
+    color: forgeSequence[0].color as any
+  }).start();
+
+  let phase = 0;
+  const interval = setInterval(() => {
+    phase = (phase + 1) % forgeSequence.length;
+    spinner.text = forgeSequence[phase].text;
+    spinner.color = forgeSequence[phase].color as any;
+  }, 1500);
+
+  return {
+    stop: (msg?: string) => {
+      clearInterval(interval);
+      spinner.stopAndPersist({ text: msg });
+    },
+    succeed: (msg: string = pc.green('Forged successfully.')) => {
+      clearInterval(interval);
+      spinner.succeed(msg);
+    },
+    fail: (msg?: string) => {
+      clearInterval(interval);
+      spinner.fail(pc.red(msg || 'Forging failed.'));
+    }
+  };
+}
+
+export async function typewriterPrint(text: string): Promise<void> {
+  const gradientText = gradient(['#ff0000', '#ffff00'])(text);
+  // Due to gradient coloring character by character breaking ANSI,
+  // we will just print the un-gradiented text character by character 
+  // or print chunks if we want gradient. Let's do raw white typewriter 
+  // with a fire gradient header instead.
+  
+  console.log(gradient(['#ff0000', '#ffff00'])('  ✧ Explanation ✧'));
+  
+  process.stdout.write('  ');
+  for (let i = 0; i < text.length; i++) {
+    process.stdout.write(pc.white(text[i]));
+    
+    // Formatting newlines properly with indentation
+    if (text[i] === '\n') {
+      process.stdout.write('  ');
+    }
+    
+    const delay = Math.floor(Math.random() * 20) + 10; // 10-30ms
+    await new Promise(r => setTimeout(r, delay));
+  }
+  console.log('\n');
+}
+
+export async function displayAnswer(answer: string): Promise<void> {
+  console.log(gradient(['#00ff00', '#00ffff'])('  ✧ Answer ✧'));
+  
+  process.stdout.write('  ');
+  for (let i = 0; i < answer.length; i++) {
+    process.stdout.write(pc.white(answer[i]));
+    
+    // Formatting newlines properly with indentation
+    if (answer[i] === '\n') {
+      process.stdout.write('  ');
+    }
+    
+    const delay = Math.floor(Math.random() * 20) + 10;
+    await new Promise(r => setTimeout(r, delay));
+  }
+  console.log('\n');
+}
+
+export function displayCommandBlock(command: string) {
+  const highlighted = highlight(command, { language: 'bash', ignoreIllegals: true });
+  
+  console.log(grey('  Command:'));
+  console.log(orange('  ┃ '));
+  // Replace newlines to maintain the block border
+  const blockCommand = highlighted.split('\n').map(line => `${orange('  ┃ ')} ${line}`).join('\n');
+  console.log(blockCommand);
+  console.log(orange('  ┃ '));
+  console.log();
 }
 
 export function createSpinner() {
