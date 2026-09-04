@@ -1,12 +1,12 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, inlineConfirm } from './src/ui.js';
+import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText } from './src/ui.js';
 import { AIAgent, verifyKey } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
-import { text, isCancel, cancel, spinner as clackSpinner } from '@clack/prompts';
+import { text, isCancel, cancel, note, spinner as clackSpinner, confirm } from '@clack/prompts';
 import pc from 'picocolors';
 
 const program = new Command();
@@ -143,7 +143,7 @@ program
 
           if (response.isComplete) {
             isComplete = true;
-            console.log(pc.green('  ✓ Goal Achieved\n'));
+            await shimmerText('✨ Goal achieved successfully!');
             break;
           }
 
@@ -155,15 +155,20 @@ program
             if (response.is_destructive) {
               // Terminal bell \x07
               process.stdout.write('\x07');
-              shouldRun = await inlineConfirm(pc.red('⚠ Destructive command. Execute?'), false);
+              console.log(pc.bgRed(pc.white(' ⚠ DANGER: This command modifies system files. ')));
+              shouldRun = await confirm({
+                message: pc.red('Execute this destructive command?'),
+                initialValue: false,
+              });
             } else {
-              shouldRun = await inlineConfirm('Execute?');
+              shouldRun = await confirm({
+                message: 'Execute this command?',
+                initialValue: true,
+              });
             }
-            
-            console.log(); // Spacing after prompt
 
-            if (!shouldRun) {
-              console.log(pc.yellow('  Operation cancelled by user.\n'));
+            if (!shouldRun || isCancel(shouldRun)) {
+              note(pc.yellow('Operation cancelled by user.'));
               break;
             }
 
