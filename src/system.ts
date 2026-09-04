@@ -10,6 +10,7 @@ export interface SystemInfo {
   freeMemoryMB: number;
   distribution?: string;
   distroVersion?: string;
+  username?: string;
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {
@@ -20,6 +21,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     cpus: os.cpus().length,
     totalMemoryMB: Math.round(os.totalmem() / 1024 / 1024),
     freeMemoryMB: Math.round(os.freemem() / 1024 / 1024),
+    username: process.env.USER || os.userInfo().username,
   };
 
   if (info.platform === 'linux') {
