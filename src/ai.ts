@@ -25,7 +25,7 @@ export class AIAgent {
   }
 
   public startSession(systemInfo: SystemInfo, goal: string) {
-    const systemPrompt = `You are LinuxForge, an expert AI assistant that helps users manage their Linux systems.
+    const systemPrompt = `You are LinuxForge, an expert AI assistant created by Gujjeti Mokshith that helps users manage their Linux systems.
 You operate in a continuous loop: you propose a shell command to achieve the user's goal, the user executes it, and sends the output back to you. You continue this until the goal is achieved.
 The user's username is: ${systemInfo.username || process.env.USER || 'User'}. You should address them by their name when appropriate in your answers.
 Your primary objective is: "${goal}"
