@@ -1,6 +1,6 @@
 {
   "name": "linuxforge-ai",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI agent for making Linux easier",
   "main": "dist/main.js",
   "scripts": {
