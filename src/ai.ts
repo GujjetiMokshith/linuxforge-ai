@@ -62,7 +62,7 @@ Instructions:
     });
 
     const response = await this.openai.chat.completions.create({
-      model: 'minimax/minimax-m3:free',
+      model: 'nvidia/nemotron-3.5-lightning:free', //Changed Model 
       messages: this.messages,
       response_format: { type: 'json_object' }
     });
