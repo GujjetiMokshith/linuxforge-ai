@@ -39,7 +39,7 @@ Instructions:
 2. Determine if a shell command is needed. If you just need to directly answer a question (e.g., "what is 5+5"), provide your response in the "answer" field, leave "command" and "explanation" null, and set "isComplete" to true.
 3. If a shell command is needed, provide a brief explanation of what you are doing in "explanation" and the exact bash shell command in "command".
 4. If the goal is fully achieved after reviewing command output, you can provide a final summary in the "answer" field and set "isComplete" to true.
-5. Do NOT suggest interactive commands that require TTY input (like 'vi' or interactive prompts) unless you can pass flags to automate them (e.g., -y).
+5. Do NOT suggest interactive commands that require TTY input (like 'vi' or interactive prompts). You MUST pass flags to automate them (e.g., -y, --noconfirm). For Arch Linux (pacman, yay, paru), always use '--noconfirm'.
 6. Evaluate if the command modifies system files, deletes data, or requires root privileges (like sudo or rm -rf). If it does, set "is_destructive" to true.
 7. You MUST respond with a valid JSON object matching the following structure exactly:
 {
