@@ -95,7 +95,17 @@ Instructions:
       }
       return parsed;
     } catch (e) {
-      throw new Error(`Failed to parse AI response as JSON: ${text}`);
+      // If we completely fail to parse JSON (e.g., model truncated output),
+      // we gracefully return the raw text as thinking so the user can see it,
+      // and let the loop prompt the AI again.
+      return {
+        explanation: null,
+        command: null,
+        answer: "⚠️ The AI's response was truncated or invalid. Asking it to continue...",
+        isComplete: false,
+        is_destructive: false,
+        thinking: text.replace(/```json\n?|\n?```/g, '').trim()
+      };
     }
   }
 }
