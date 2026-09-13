@@ -179,6 +179,20 @@ export async function shimmerText(text: string, durationMs: number = 2000) {
   console.log(chalk.greenBright(text));
 }
 
+export async function displayThinking(thinking: string): Promise<void> {
+  console.log(pc.magenta('  ✧ Thinking Process ✧'));
+  
+  process.stdout.write('  ');
+  const lines = thinking.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    process.stdout.write(pc.gray(lines[i]));
+    if (i < lines.length - 1) {
+      process.stdout.write('\n  ');
+    }
+  }
+  console.log('\n');
+}
+
 export async function typewriterPrint(text: string): Promise<void> {
   const gradientText = gradient(['#ff0000', '#ffff00'])(text);
   // Due to gradient coloring character by character breaking ANSI,

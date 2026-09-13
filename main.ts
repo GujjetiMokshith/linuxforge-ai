@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText } from './src/ui.js';
+import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText, displayThinking } from './src/ui.js';
 import { AIAgent, verifyKey } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
@@ -132,6 +132,10 @@ program
             break;
           }
           s.succeed();
+
+          if (response.thinking) {
+            await displayThinking(response.thinking);
+          }
 
           if (response.explanation) {
             await typewriterPrint(response.explanation);

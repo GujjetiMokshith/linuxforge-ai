@@ -7,6 +7,7 @@ export interface AIResponse {
   answer: string | null;
   isComplete: boolean;
   is_destructive: boolean;
+  thinking?: string;
 }
 
 export class AIAgent {
@@ -74,27 +75,27 @@ Instructions:
     });
     
     try {
-      const parsed = JSON.parse(text);
-      return parsed as AIResponse;
-    } catch (e) {
-      try {
-        // Fallback 1: Strip markdown blocks
+      let parsed: AIResponse;
+      let thinking = "";
+
+      const startIndex = text.indexOf('{');
+      const endIndex = text.lastIndexOf('}');
+
+      if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+        thinking = text.substring(0, startIndex).replace(/```json\n?|\n?```/g, '').trim();
+        const jsonSubstring = text.substring(startIndex, endIndex + 1);
+        parsed = JSON.parse(jsonSubstring) as AIResponse;
+      } else {
         const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-        return JSON.parse(cleanedText) as AIResponse;
-      } catch (innerE) {
-        try {
-          // Fallback 2: Extract the JSON object from raw text (e.g. if the model dumps its "thinking process" first)
-          const startIndex = text.indexOf('{');
-          const endIndex = text.lastIndexOf('}');
-          if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-            const jsonSubstring = text.substring(startIndex, endIndex + 1);
-            return JSON.parse(jsonSubstring) as AIResponse;
-          }
-          throw new Error('No JSON object found in response.');
-        } catch (deepE) {
-          throw new Error(`Failed to parse AI response as JSON: ${text}`);
-        }
+        parsed = JSON.parse(cleanedText) as AIResponse;
       }
+
+      if (thinking) {
+        parsed.thinking = thinking;
+      }
+      return parsed;
+    } catch (e) {
+      throw new Error(`Failed to parse AI response as JSON: ${text}`);
     }
   }
 }
