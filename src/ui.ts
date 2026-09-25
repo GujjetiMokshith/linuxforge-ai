@@ -36,13 +36,13 @@ function timeAgo(dateString: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function renderDashboard(info: SystemInfo, activities: Activity[]) {
+export function renderDashboard(info: SystemInfo, activities: Activity[], model?: string) {
   const TOTAL_WIDTH = 80;
   const LEFT_WIDTH = 34;
   const RIGHT_WIDTH = 43; // 80 - 34 - 3 (borders)
   
   // Dashboard Title
-  const title = ` linuxforge v2.0.0 `;
+  const title = ` linuxforge v1.0.1 `;
   const topBorder = orange(`╭${'┄'.repeat(3)}${title}${'┄'.repeat(TOTAL_WIDTH - 5 - title.length)}╮`);
   const bottomBorder = orange(`╰${'┄'.repeat(TOTAL_WIDTH - 2)}╯`);
 
@@ -64,6 +64,12 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
   const osStr = orange(`OS: ${info.distribution || info.platform} ${info.distroVersion || info.release}`);
   const archStr = orange(`Arch: ${info.architecture} | ${info.cpus} CPUs`);
 
+  // Truncate model name for display
+  const modelDisplay = model
+    ? (model.length > 28 ? model.substring(0, 25) + '...' : model)
+    : 'not set';
+  const modelStr = orange(`Model: ${modelDisplay}`);
+
   const leftLines = [
     '',
     pad(`  ${greeting}`, LEFT_WIDTH),
@@ -73,6 +79,7 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
     pad(`  ${timeStr}`, LEFT_WIDTH),
     pad(`  ${osStr}`, LEFT_WIDTH),
     pad(`  ${archStr}`, LEFT_WIDTH),
+    pad(`  ${modelStr}`, LEFT_WIDTH),
     ''
   ];
 
@@ -106,7 +113,8 @@ export function renderDashboard(info: SystemInfo, activities: Activity[]) {
   rightLines.push(pad(` ${orange('┄'.repeat(RIGHT_WIDTH - 2))}`, RIGHT_WIDTH));
   rightLines.push(pad(` ${orange('Available Commands')}`, RIGHT_WIDTH));
   rightLines.push('');
-  rightLines.push(pad(`   ${white('/key')}    ${grey('Update OpenRouter API Key')}`, RIGHT_WIDTH));
+  rightLines.push(pad(`   ${white('/key')}    ${grey('Update Groq API Key')}`, RIGHT_WIDTH));
+  rightLines.push(pad(`   ${white('/model')}  ${grey('Switch AI model')}`, RIGHT_WIDTH));
   rightLines.push(pad(`   ${white('/clear')}  ${grey('Clear terminal history')}`, RIGHT_WIDTH));
   rightLines.push(pad(`   ${white('/exit')}   ${grey('Exit LinuxForge')}`, RIGHT_WIDTH));
   rightLines.push(pad('', RIGHT_WIDTH));
@@ -179,6 +187,20 @@ export async function shimmerText(text: string, durationMs: number = 2000) {
   console.log(chalk.greenBright(text));
 }
 
+export async function displayThinking(thinking: string): Promise<void> {
+  console.log(pc.magenta('  ✧ Thinking Process ✧'));
+  
+  process.stdout.write('  ');
+  const lines = thinking.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    process.stdout.write(pc.gray(lines[i]));
+    if (i < lines.length - 1) {
+      process.stdout.write('\n  ');
+    }
+  }
+  console.log('\n');
+}
+
 export async function typewriterPrint(text: string): Promise<void> {
   const gradientText = gradient(['#ff0000', '#ffff00'])(text);
   // Due to gradient coloring character by character breaking ANSI,
@@ -231,8 +253,4 @@ export function displayCommandBlock(command: string) {
   console.log(blockCommand);
   console.log(orange('  ┃ '));
   console.log();
-}
-
-export function createSpinner() {
-  return clackSpinner();
 }

@@ -2,11 +2,11 @@
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText } from './src/ui.js';
-import { AIAgent, verifyKey } from './src/ai.js';
+import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText, displayThinking } from './src/ui.js';
+import { AIAgent, verifyKey, fetchModels } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
-import { text, isCancel, cancel, note, spinner as clackSpinner, confirm } from '@clack/prompts';
+import { text, isCancel, cancel, note, spinner as clackSpinner, confirm, select } from '@clack/prompts';
 import pc from 'picocolors';
 
 const program = new Command();
@@ -17,16 +17,16 @@ program
   .action(async () => {
     try {
       let config = await readConfig();
-      let apiKey = process.env.OPENROUTER_API_KEY || config.openRouterApiKey;
+      let apiKey = process.env.GROQ_API_KEY || config.groqApiKey;
 
       console.clear();
 
-      // Key Verification Loop
+      // ── Key Verification Loop ──
       while (true) {
         if (!apiKey) {
           const inputKey = await text({
-            message: 'Please enter your OpenRouter API Key (sk-or-...):',
-            placeholder: 'sk-or-...',
+            message: 'Please enter your Groq API Key (gsk_...):',
+            placeholder: 'gsk_...',
           });
 
           if (isCancel(inputKey)) {
@@ -42,7 +42,7 @@ program
         
         if (isValid) {
           s.stop('API Key verified successfully.');
-          config.openRouterApiKey = apiKey;
+          config.groqApiKey = apiKey;
           await writeConfig(config);
           break;
         } else {
@@ -51,17 +51,51 @@ program
         }
       }
 
-      // Render Dashboard
+      // ── Model Selection ──
+      let selectedModel = config.selectedModel;
+      
+      if (!selectedModel) {
+        const s = clackSpinner();
+        s.start('Fetching available models from Groq...');
+        const models = await fetchModels(apiKey!);
+        s.stop(`Found ${models.length} models.`);
+
+        if (models.length === 0) {
+          console.error(pc.red('No models available. Please check your API key permissions.'));
+          process.exit(1);
+        }
+
+        const modelChoice = await select({
+          message: 'Select an AI model:',
+          options: models.map(m => ({
+            value: m.id,
+            label: m.id,
+            hint: m.owned_by,
+          })),
+        });
+
+        if (isCancel(modelChoice)) {
+          cancel('Operation cancelled.');
+          process.exit(0);
+        }
+
+        selectedModel = modelChoice as string;
+        config.selectedModel = selectedModel;
+        await writeConfig(config);
+        note(pc.green(`Model set to: ${selectedModel}`));
+      }
+
+      // ── Render Dashboard ──
       const sysInfo = await getSystemInfo();
       console.clear();
-      renderDashboard(sysInfo, config.activities);
+      renderDashboard(sysInfo, config.activities, selectedModel);
 
-      let agent = new AIAgent(apiKey!);
+      let agent = new AIAgent(apiKey!, selectedModel);
       
       // Set solid block cursor
       process.stdout.write('\x1b[2 q');
 
-      // REPL Loop
+      // ── REPL Loop ──
       while (true) {
         const goal = await text({
           message: pc.white('> '),
@@ -84,14 +118,14 @@ program
         
         if (goalStr.trim() === '/clear') {
           console.clear();
-          renderDashboard(sysInfo, config.activities);
+          renderDashboard(sysInfo, config.activities, selectedModel);
           continue;
         }
         
         if (goalStr.trim() === '/key') {
           const inputKey = await text({
-            message: 'Please enter your new OpenRouter API Key:',
-            placeholder: 'sk-or-...',
+            message: 'Please enter your new Groq API Key:',
+            placeholder: 'gsk_...',
           });
           
           if (!isCancel(inputKey) && inputKey) {
@@ -102,12 +136,42 @@ program
             if (isValid) {
               s.stop('API Key updated and verified successfully.');
               apiKey = inputKey as string;
-              config.openRouterApiKey = apiKey;
+              config.groqApiKey = apiKey;
               await writeConfig(config);
-              agent = new AIAgent(apiKey);
+              agent = new AIAgent(apiKey, selectedModel!);
             } else {
               s.stop('Invalid API Key. Update failed.');
             }
+          }
+          continue;
+        }
+
+        if (goalStr.trim() === '/model') {
+          const s = clackSpinner();
+          s.start('Fetching available models from Groq...');
+          const models = await fetchModels(apiKey!);
+          s.stop(`Found ${models.length} models.`);
+
+          if (models.length === 0) {
+            note(pc.red('No models available.'));
+            continue;
+          }
+
+          const modelChoice = await select({
+            message: 'Select an AI model:',
+            options: models.map(m => ({
+              value: m.id,
+              label: m.id,
+              hint: m.owned_by,
+            })),
+          });
+
+          if (!isCancel(modelChoice)) {
+            selectedModel = modelChoice as string;
+            config.selectedModel = selectedModel;
+            await writeConfig(config);
+            agent = new AIAgent(apiKey!, selectedModel);
+            note(pc.green(`Model switched to: ${selectedModel}`));
           }
           continue;
         }
@@ -132,6 +196,10 @@ program
             break;
           }
           s.succeed();
+
+          if (response.thinking) {
+            await displayThinking(response.thinking);
+          }
 
           if (response.explanation) {
             await typewriterPrint(response.explanation);

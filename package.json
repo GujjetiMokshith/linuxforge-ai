@@ -19,7 +19,7 @@
     "cli",
     "assistant",
     "terminal",
-    "openrouter"
+    "groq"
   ],
   "author": "Gujjeti Mokshith",
   "license": "MIT",
@@ -31,16 +31,14 @@
   "homepage": "https://github.com/GujjetiMokshith/linuxforge-ai#readme",
   "dependencies": {
     "@clack/prompts": "^1.7.0",
-    "boxen": "^8.0.1",
     "chalk": "^6.0.0",
     "chalk-animation": "^2.0.3",
     "cli-highlight": "^2.1.11",
     "commander": "^15.0.0",
     "gradient-string": "^3.0.0",
-    "openai": "^7.10.0",
+    "groq-sdk": "^0.18.0",
     "ora": "^9.4.1",
-    "picocolors": "^1.1.1",
-    "string-width": "^8.2.2"
+    "picocolors": "^1.1.1"
   },
   "devDependencies": {
     "@types/chalk-animation": "^1.6.3",

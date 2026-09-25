@@ -1,12 +1,10 @@
 import { spawn } from 'child_process';
-import { confirm } from '@clack/prompts';
 import pc from 'picocolors';
 
 export interface CommandResult {
   stdout: string;
   stderr: string;
   exitCode: number | null;
-  cancelled: boolean;
 }
 
 export async function executeCommand(command: string): Promise<CommandResult> {
@@ -64,7 +62,6 @@ export async function executeCommand(command: string): Promise<CommandResult> {
         stdout,
         stderr,
         exitCode: code,
-        cancelled: false
       });
     });
     
@@ -73,7 +70,6 @@ export async function executeCommand(command: string): Promise<CommandResult> {
         stdout,
         stderr: err.message,
         exitCode: -1,
-        cancelled: false
       });
     });
   });

@@ -8,7 +8,8 @@ export interface Activity {
 }
 
 export interface Config {
-  openRouterApiKey?: string;
+  groqApiKey?: string;
+  selectedModel?: string;
   activities: Activity[];
 }
 
@@ -21,7 +22,13 @@ export async function readConfig(): Promise<Config> {
   const configPath = getConfigPath();
   try {
     const data = await fs.readFile(configPath, 'utf-8');
-    return JSON.parse(data) as Config;
+    const raw = JSON.parse(data);
+    // Migrate old config format if needed
+    return {
+      groqApiKey: raw.groqApiKey || raw.openRouterApiKey,
+      selectedModel: raw.selectedModel,
+      activities: raw.activities || [],
+    };
   } catch (error: any) {
     if (error.code === 'ENOENT') {
       return { activities: [] };
