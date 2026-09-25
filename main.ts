@@ -2,11 +2,11 @@
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, startSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText, displayThinking } from './src/ui.js';
+import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText, displayThinking } from './src/ui.js';
 import { AIAgent, verifyKey, fetchModels } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
-import { text, isCancel, cancel, confirm, select } from '@clack/prompts';
+import { text, isCancel, cancel, note, spinner as clackSpinner, confirm, select } from '@clack/prompts';
 import pc from 'picocolors';
 
 const program = new Command();
@@ -30,22 +30,23 @@ program
           });
 
           if (isCancel(inputKey)) {
-            cancel('Goodbye!');
+            cancel('Operation cancelled.');
             process.exit(0);
           }
           apiKey = inputKey as string;
         }
 
-        const s = startSpinner('Verifying API Key...');
+        const s = clackSpinner();
+        s.start('Verifying API Key...');
         const isValid = await verifyKey(apiKey);
         
         if (isValid) {
-          s.succeed('API Key verified successfully.');
+          s.stop('API Key verified successfully.');
           config.groqApiKey = apiKey;
           await writeConfig(config);
           break;
         } else {
-          s.fail('Invalid API Key. Please try again.');
+          s.stop('Invalid API Key. Please try again.');
           apiKey = undefined; // Force prompt again
         }
       }
@@ -54,9 +55,10 @@ program
       let selectedModel = config.selectedModel;
       
       if (!selectedModel) {
-        const s = startSpinner('Fetching available models from Groq...');
+        const s = clackSpinner();
+        s.start('Fetching available models from Groq...');
         const models = await fetchModels(apiKey!);
-        s.succeed(`Found ${models.length} models.`);
+        s.stop(`Found ${models.length} models.`);
 
         if (models.length === 0) {
           console.error(pc.red('No models available. Please check your API key permissions.'));
@@ -73,14 +75,14 @@ program
         });
 
         if (isCancel(modelChoice)) {
-          cancel('Goodbye!');
+          cancel('Operation cancelled.');
           process.exit(0);
         }
 
         selectedModel = modelChoice as string;
         config.selectedModel = selectedModel;
         await writeConfig(config);
-        console.log(pc.green(`  Model set to: ${selectedModel}`));
+        note(pc.green(`Model set to: ${selectedModel}`));
       }
 
       // ── Render Dashboard ──
@@ -127,29 +129,31 @@ program
           });
           
           if (!isCancel(inputKey) && inputKey) {
-            const s = startSpinner('Verifying new API Key...');
+            const s = clackSpinner();
+            s.start('Verifying new API Key...');
             const isValid = await verifyKey(inputKey as string);
             
             if (isValid) {
-              s.succeed('API Key updated and verified successfully.');
+              s.stop('API Key updated and verified successfully.');
               apiKey = inputKey as string;
               config.groqApiKey = apiKey;
               await writeConfig(config);
               agent = new AIAgent(apiKey, selectedModel!);
             } else {
-              s.fail('Invalid API Key. Update failed.');
+              s.stop('Invalid API Key. Update failed.');
             }
           }
           continue;
         }
 
         if (goalStr.trim() === '/model') {
-          const s = startSpinner('Fetching available models from Groq...');
+          const s = clackSpinner();
+          s.start('Fetching available models from Groq...');
           const models = await fetchModels(apiKey!);
-          s.succeed(`Found ${models.length} models.`);
+          s.stop(`Found ${models.length} models.`);
 
           if (models.length === 0) {
-            console.log(pc.red('  No models available.'));
+            note(pc.red('No models available.'));
             continue;
           }
 
@@ -167,7 +171,7 @@ program
             config.selectedModel = selectedModel;
             await writeConfig(config);
             agent = new AIAgent(apiKey!, selectedModel);
-            console.log(pc.green(`  Model switched to: ${selectedModel}`));
+            note(pc.green(`Model switched to: ${selectedModel}`));
           }
           continue;
         }
@@ -181,7 +185,7 @@ program
         await addActivity(`Goal: ${goalStr}`);
 
         while (!isComplete) {
-          const s = startSpinner();
+          const s = startForgingSpinner();
           
           let response;
           try {
@@ -207,7 +211,7 @@ program
 
           if (response.isComplete) {
             isComplete = true;
-            await shimmerText('Goal achieved successfully!');
+            await shimmerText('✨ Goal achieved successfully!');
             break;
           }
 
@@ -232,7 +236,7 @@ program
             }
 
             if (!shouldRun || isCancel(shouldRun)) {
-              console.log(pc.yellow('  Operation cancelled by user.'));
+              note(pc.yellow('Operation cancelled by user.'));
               break;
             }
 

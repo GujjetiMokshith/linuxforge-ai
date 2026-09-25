@@ -1,37 +1,140 @@
 import pc from 'picocolors';
+import { spinner as clackSpinner, note } from '@clack/prompts';
 import { SystemInfo } from './system.js';
 import { Activity } from './config.js';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 import gradient from 'gradient-string';
 import { highlight } from 'cli-highlight';
+import chalkAnimation from 'chalk-animation';
+import chalk from 'chalk';
+
+// Custom RGB colors
+const orange = (text: string) => `\x1b[38;2;255;165;0m${text}\x1b[39m`;
+const white = (text: string) => `\x1b[37m${text}\x1b[39m`;
+const grey = (text: string) => `\x1b[90m${text}\x1b[39m`;
+
+// Helper to strip ANSI codes to get visual length
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+// Helper to pad strings visually
+function pad(str: string, length: number, fill = ' '): string {
+  const visualLen = stripAnsi(str).length;
+  if (visualLen >= length) return str;
+  return str + fill.repeat(length - visualLen);
+}
+
+// Format relative time
+function timeAgo(dateString: string): string {
+  const diff = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export function renderDashboard(info: SystemInfo, activities: Activity[], model?: string) {
-  console.log();
-  console.log(gradient(['#ff512f', '#dd2476'])(' LinuxForge AI '));
-  console.log(pc.gray(' ─────────────────────────────────────'));
+  const TOTAL_WIDTH = 80;
+  const LEFT_WIDTH = 34;
+  const RIGHT_WIDTH = 43; // 80 - 34 - 3 (borders)
   
-  const osStr = `${info.distribution || info.platform} ${info.distroVersion || info.release}`;
-  const modelStr = model || 'not set';
-  
-  console.log(` ${pc.bold('OS:')} ${pc.cyan(osStr)}  ${pc.bold('Arch:')} ${pc.cyan(info.architecture)}  ${pc.bold('CPUs:')} ${pc.cyan(info.cpus)}`);
-  console.log(` ${pc.bold('Model:')} ${pc.cyan(modelStr)}`);
+  // Dashboard Title
+  const title = ` linuxforge v1.0.1 `;
+  const topBorder = orange(`╭${'┄'.repeat(3)}${title}${'┄'.repeat(TOTAL_WIDTH - 5 - title.length)}╮`);
+  const bottomBorder = orange(`╰${'┄'.repeat(TOTAL_WIDTH - 2)}╯`);
 
-  if (activities && activities.length > 0) {
-    console.log();
-    console.log(` ${pc.bold('Recent Activity:')}`);
-    const recentActivities = [...activities].reverse().slice(0, 3);
-    for (const a of recentActivities) {
-      let actionStr = a.action;
-      if (actionStr.length > 60) actionStr = actionStr.substring(0, 57) + '...';
-      console.log(` ${pc.gray('•')} ${actionStr}`);
+  // Left Column Content
+  const username = process.env.USER || 'User';
+  const greeting = orange(`Welcome back ${username}!`);
+  
+  // 8-bit Alien Graphic (5 lines) in orange
+  const alien = [
+    orange('  ▄▄████▄▄  '),
+    orange('▄██████████▄'),
+    orange('██▄██████▄██'),
+    orange(' ▄▀ ▄▄▄▄ ▀▄ '),
+    orange('▀   ▀  ▀   ▀')
+  ];
+
+  const now = new Date();
+  const timeStr = orange(`Time: ${now.toLocaleTimeString()}`);
+  const osStr = orange(`OS: ${info.distribution || info.platform} ${info.distroVersion || info.release}`);
+  const archStr = orange(`Arch: ${info.architecture} | ${info.cpus} CPUs`);
+
+  // Truncate model name for display
+  const modelDisplay = model
+    ? (model.length > 28 ? model.substring(0, 25) + '...' : model)
+    : 'not set';
+  const modelStr = orange(`Model: ${modelDisplay}`);
+
+  const leftLines = [
+    '',
+    pad(`  ${greeting}`, LEFT_WIDTH),
+    '',
+    ...alien.map(line => pad(`         ${line}`, LEFT_WIDTH)),
+    '',
+    pad(`  ${timeStr}`, LEFT_WIDTH),
+    pad(`  ${osStr}`, LEFT_WIDTH),
+    pad(`  ${archStr}`, LEFT_WIDTH),
+    pad(`  ${modelStr}`, LEFT_WIDTH),
+    ''
+  ];
+
+  // Right Column Content
+  let rightLines = [
+    pad(` ${orange('Recent activity')}`, RIGHT_WIDTH),
+    ''
+  ];
+
+  const recentActivities = [...activities].reverse().slice(0, 3);
+  if (recentActivities.length === 0) {
+    rightLines.push(pad(`   ${grey('No recent activity')}`, RIGHT_WIDTH));
+    rightLines.push(pad('', RIGHT_WIDTH));
+    rightLines.push(pad('', RIGHT_WIDTH));
+  } else {
+    for (let i = 0; i < 3; i++) {
+      if (recentActivities[i]) {
+        const timeLog = grey(pad(timeAgo(recentActivities[i].timestamp), 8));
+        let actionStr = recentActivities[i].action;
+        if (actionStr.length > RIGHT_WIDTH - 15) {
+          actionStr = actionStr.substring(0, RIGHT_WIDTH - 18) + '...';
+        }
+        rightLines.push(pad(`   ${timeLog} ${white(actionStr)}`, RIGHT_WIDTH));
+      } else {
+        rightLines.push(pad('', RIGHT_WIDTH));
+      }
     }
   }
 
+  rightLines.push(pad('', RIGHT_WIDTH));
+  rightLines.push(pad(` ${orange('┄'.repeat(RIGHT_WIDTH - 2))}`, RIGHT_WIDTH));
+  rightLines.push(pad(` ${orange('Available Commands')}`, RIGHT_WIDTH));
+  rightLines.push('');
+  rightLines.push(pad(`   ${white('/key')}    ${grey('Update Groq API Key')}`, RIGHT_WIDTH));
+  rightLines.push(pad(`   ${white('/model')}  ${grey('Switch AI model')}`, RIGHT_WIDTH));
+  rightLines.push(pad(`   ${white('/clear')}  ${grey('Clear terminal history')}`, RIGHT_WIDTH));
+  rightLines.push(pad(`   ${white('/exit')}   ${grey('Exit LinuxForge')}`, RIGHT_WIDTH));
+  rightLines.push(pad('', RIGHT_WIDTH));
+
+  // Merge Columns
   console.log();
-  console.log(` ${pc.bold('Commands:')} /key, /model, /clear, /exit`);
-  console.log(pc.gray(' ─────────────────────────────────────'));
-  console.log();
+  console.log(topBorder);
+  
+  const maxLines = Math.max(leftLines.length, rightLines.length);
+  for (let i = 0; i < maxLines; i++) {
+    const l = leftLines[i] || pad('', LEFT_WIDTH);
+    const r = rightLines[i] || pad('', RIGHT_WIDTH);
+    console.log(orange('┊') + l + ' ' + r + orange('┊'));
+  }
+  
+  console.log(bottomBorder);
+  console.log(grey('─'.repeat(TOTAL_WIDTH)));
 }
+
+// Special Effects Engine
 
 export interface ForgingSpinner {
   stop: (msg?: string) => void;
@@ -39,62 +142,116 @@ export interface ForgingSpinner {
   fail: (msg?: string) => void;
 }
 
-export function startSpinner(text: string = 'Thinking...'): ForgingSpinner {
+export function startForgingSpinner(): ForgingSpinner {
+  const forgeSequence = [
+    { text: pc.gray('Gathering system context...'), color: 'gray' },
+    { text: orange('Smelting logic...'), color: 'yellow' },
+    { text: pc.red('Forging command...'), color: 'red' },
+    { text: pc.cyan('Quenching syntax...'), color: 'cyan' },
+    { text: pc.white('Finalizing...'), color: 'white' }
+  ];
+  
   const spinner = ora({
-    text: pc.dim(text),
-    color: 'cyan',
-    spinner: 'dots'
+    text: forgeSequence[0].text,
+    spinner: 'dots12',
+    color: forgeSequence[0].color as any
   }).start();
+
+  let phase = 0;
+  const interval = setInterval(() => {
+    phase = (phase + 1) % forgeSequence.length;
+    spinner.text = forgeSequence[phase].text;
+    spinner.color = forgeSequence[phase].color as any;
+  }, 1500);
 
   return {
     stop: (msg?: string) => {
-      if (msg) spinner.stopAndPersist({ symbol: pc.gray('■'), text: pc.dim(msg) });
-      else spinner.stop();
+      clearInterval(interval);
+      spinner.stopAndPersist({ text: msg });
     },
-    succeed: (msg?: string) => {
-      spinner.succeed(pc.dim(msg || 'Success'));
+    succeed: (msg: string = pc.green('Forged successfully.')) => {
+      clearInterval(interval);
+      spinner.succeed(msg);
     },
     fail: (msg?: string) => {
-      spinner.fail(pc.red(msg || 'Failed'));
+      clearInterval(interval);
+      spinner.fail(pc.red(msg || 'The forge collapsed.'));
     }
   };
 }
 
-export async function shimmerText(text: string, durationMs: number = 0) {
-  console.log(pc.green('✨ ' + text));
+export async function shimmerText(text: string, durationMs: number = 2000) {
+  const animation = chalkAnimation.pulse(text);
+  await new Promise(resolve => setTimeout(resolve, durationMs));
+  animation.replace(chalk.greenBright(text));
+  animation.stop();
 }
 
 export async function displayThinking(thinking: string): Promise<void> {
-  // Usually thinking is internal, we can display it dim
+  console.log(pc.magenta('  ✧ Thinking Process ✧'));
+  
+  process.stdout.write('  ');
   const lines = thinking.split('\n');
-  console.log(pc.dim('  ┌─ Thinking'));
-  for (const line of lines) {
-    console.log(pc.dim('  │ ' + line));
+  for (let i = 0; i < lines.length; i++) {
+    process.stdout.write(pc.gray(lines[i]));
+    if (i < lines.length - 1) {
+      process.stdout.write('\n  ');
+    }
   }
-  console.log(pc.dim('  └─\n'));
+  console.log('\n');
 }
 
 export async function typewriterPrint(text: string): Promise<void> {
-  // Display text directly (instant)
-  // Simple markdown-like rendering: bolding text between **, etc. is hard without a library,
-  // but we can just print it nicely.
-  console.log(pc.dim('Explanation:'));
-  console.log(text + '\n');
+  const gradientText = gradient(['#ff0000', '#ffff00'])(text);
+  // Due to gradient coloring character by character breaking ANSI,
+  // we will just print the un-gradiented text character by character 
+  // or print chunks if we want gradient. Let's do raw white typewriter 
+  // with a fire gradient header instead.
+  
+  console.log(gradient(['#ff0000', '#ffff00'])('  ✧ Explanation ✧'));
+  
+  process.stdout.write('  ');
+  for (let i = 0; i < text.length; i++) {
+    process.stdout.write(pc.white(text[i]));
+    
+    // Formatting newlines properly with indentation
+    if (text[i] === '\n') {
+      process.stdout.write('  ');
+    }
+    
+    const delay = Math.floor(Math.random() * 20) + 10; // 10-30ms
+    await new Promise(r => setTimeout(r, delay));
+  }
+  console.log('\n');
 }
 
 export async function displayAnswer(answer: string): Promise<void> {
-  console.log(pc.bold(pc.green('Answer:')));
-  console.log(answer + '\n');
+  console.log(gradient(['#00ff00', '#00ffff'])('  ✧ Answer ✧'));
+  
+  process.stdout.write('  ');
+  for (let i = 0; i < answer.length; i++) {
+    process.stdout.write(pc.white(answer[i]));
+    
+    // Formatting newlines properly with indentation
+    if (answer[i] === '\n') {
+      process.stdout.write('  ');
+    }
+    
+    const delay = Math.floor(Math.random() * 20) + 10;
+    await new Promise(r => setTimeout(r, delay));
+  }
+  console.log('\n');
 }
 
 export function displayCommandBlock(command: string) {
   const lang = process.platform === 'win32' ? 'powershell' : 'bash';
   const highlighted = highlight(command, { language: lang, ignoreIllegals: true });
   
-  console.log(pc.cyan('  ▶ Command to execute:'));
-  const lines = highlighted.split('\n');
-  for (const line of lines) {
-    console.log('    ' + line);
-  }
+  console.log(grey('  Command:'));
+  console.log(orange('  ┃ '));
+  // Replace newlines to maintain the block border
+  const blockCommand = highlighted.split('\n').map(line => `${orange('  ┃ ')} ${line}`).join('\n');
+  console.log(blockCommand);
+  console.log(orange('  ┃ '));
   console.log();
 }
