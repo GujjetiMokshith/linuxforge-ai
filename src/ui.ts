@@ -183,8 +183,8 @@ export function startForgingSpinner(): ForgingSpinner {
 export async function shimmerText(text: string, durationMs: number = 2000) {
   const animation = chalkAnimation.pulse(text);
   await new Promise(resolve => setTimeout(resolve, durationMs));
+  animation.replace(chalk.greenBright(text));
   animation.stop();
-  console.log(chalk.greenBright(text));
 }
 
 export async function displayThinking(thinking: string): Promise<void> {
@@ -244,7 +244,8 @@ export async function displayAnswer(answer: string): Promise<void> {
 }
 
 export function displayCommandBlock(command: string) {
-  const highlighted = highlight(command, { language: 'bash', ignoreIllegals: true });
+  const lang = process.platform === 'win32' ? 'powershell' : 'bash';
+  const highlighted = highlight(command, { language: lang, ignoreIllegals: true });
   
   console.log(grey('  Command:'));
   console.log(orange('  ┃ '));

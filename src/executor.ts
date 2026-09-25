@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import * as os from 'os';
 import pc from 'picocolors';
 
 export interface CommandResult {
@@ -7,10 +8,19 @@ export interface CommandResult {
   exitCode: number | null;
 }
 
+function getShellArgs(command: string): { shell: string; args: string[] } {
+  const platform = os.platform();
+  if (platform === 'win32') {
+    return { shell: 'powershell', args: ['-NoProfile', '-Command', command] };
+  }
+  return { shell: 'bash', args: ['-c', command] };
+}
+
 export async function executeCommand(command: string): Promise<CommandResult> {
   return new Promise((resolve) => {
-    // We use bash -c to support pipes and shell builtins
-    const child = spawn('bash', ['-c', command], {
+    const { shell, args } = getShellArgs(command);
+    
+    const child = spawn(shell, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
       env: process.env
     });
