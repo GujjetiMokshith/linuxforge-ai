@@ -2,11 +2,27 @@
 
 import { Command } from 'commander';
 import { getSystemInfo } from './src/system.js';
-import { renderDashboard, startForgingSpinner, typewriterPrint, displayCommandBlock, displayAnswer, shimmerText, displayThinking } from './src/ui.js';
+import {
+  renderDashboard,
+  renderTaskHeader,
+  renderUserInputBlock,
+  displayNarrative,
+  displayThinking,
+  displayCommandAction,
+  displayFileAction,
+  displayActionStatus,
+  displayAgentBadge,
+  displayGoalAchieved,
+  displayAnswer,
+  renderActiveInputPanel,
+  renderBottomStatusBar,
+  startAgentSpinner,
+  colors
+} from './src/ui.js';
 import { AIAgent, verifyKey, fetchModels } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
-import { text, isCancel, cancel, note, spinner as clackSpinner, confirm, select } from '@clack/prompts';
+import { text, isCancel, cancel, confirm, select } from '@clack/prompts';
 import pc from 'picocolors';
 
 const program = new Command();
@@ -25,28 +41,27 @@ program
       while (true) {
         if (!apiKey) {
           const inputKey = await text({
-            message: 'Please enter your Groq API Key (gsk_...):',
+            message: `  ${colors.brightBlue('│')} Please enter your Groq API Key:`,
             placeholder: 'gsk_...',
           });
 
           if (isCancel(inputKey)) {
-            cancel('Operation cancelled.');
+            console.log(colors.mutedGray('\n  * Operation cancelled.'));
             process.exit(0);
           }
           apiKey = inputKey as string;
         }
 
-        const s = clackSpinner();
-        s.start('Verifying API Key...');
+        const s = startAgentSpinner('Verifying API Key...');
         const isValid = await verifyKey(apiKey);
         
         if (isValid) {
-          s.stop('API Key verified successfully.');
+          s.succeed('API Key verified successfully.');
           config.groqApiKey = apiKey;
           await writeConfig(config);
           break;
         } else {
-          s.stop('Invalid API Key. Please try again.');
+          s.fail('Invalid API Key. Please try again.');
           apiKey = undefined; // Force prompt again
         }
       }
@@ -55,18 +70,17 @@ program
       let selectedModel = config.selectedModel;
       
       if (!selectedModel) {
-        const s = clackSpinner();
-        s.start('Fetching available models from Groq...');
+        const s = startAgentSpinner('Fetching available models from Groq...');
         const models = await fetchModels(apiKey!);
-        s.stop(`Found ${models.length} models.`);
+        s.succeed(`Found ${models.length} models.`);
 
         if (models.length === 0) {
-          console.error(pc.red('No models available. Please check your API key permissions.'));
+          console.error(colors.mutedGray('  * No models available. Please check your API key permissions.'));
           process.exit(1);
         }
 
         const modelChoice = await select({
-          message: 'Select an AI model:',
+          message: `${colors.brightBlue('│')} Select an AI model:`,
           options: models.map(m => ({
             value: m.id,
             label: m.id,
@@ -75,14 +89,14 @@ program
         });
 
         if (isCancel(modelChoice)) {
-          cancel('Operation cancelled.');
+          console.log(colors.mutedGray('\n  * Operation cancelled.'));
           process.exit(0);
         }
 
         selectedModel = modelChoice as string;
         config.selectedModel = selectedModel;
         await writeConfig(config);
-        note(pc.green(`Model set to: ${selectedModel}`));
+        console.log(`\n  ${colors.brightBlue('▣')}  ${colors.white('Model set to:')} ${colors.brightBlue(selectedModel)}\n`);
       }
 
       // ── Render Dashboard ──
@@ -98,14 +112,14 @@ program
       // ── REPL Loop ──
       while (true) {
         const goal = await text({
-          message: pc.white('> '),
-          placeholder: pc.gray('Ask LinuxForge... (e.g. "install spotify")'),
+          message: `${colors.brightBlue('LinuxForge')} ${colors.mutedGray('·')} ${colors.mutedGray(selectedModel!)}`,
+          placeholder: 'Ask... (e.g. "install spotify")',
         });
 
         if (isCancel(goal)) {
           // Reset cursor on exit
           process.stdout.write('\x1b[0 q');
-          cancel('Goodbye!');
+          console.log(colors.mutedGray('\n  * Goodbye!\n'));
           process.exit(0);
         }
 
@@ -124,41 +138,39 @@ program
         
         if (goalStr.trim() === '/key') {
           const inputKey = await text({
-            message: 'Please enter your new Groq API Key:',
+            message: `  ${colors.brightBlue('│')} Please enter your new Groq API Key:`,
             placeholder: 'gsk_...',
           });
           
           if (!isCancel(inputKey) && inputKey) {
-            const s = clackSpinner();
-            s.start('Verifying new API Key...');
+            const s = startAgentSpinner('Verifying new API Key...');
             const isValid = await verifyKey(inputKey as string);
             
             if (isValid) {
-              s.stop('API Key updated and verified successfully.');
+              s.succeed('API Key updated and verified successfully.');
               apiKey = inputKey as string;
               config.groqApiKey = apiKey;
               await writeConfig(config);
               agent = new AIAgent(apiKey, selectedModel!);
             } else {
-              s.stop('Invalid API Key. Update failed.');
+              s.fail('Invalid API Key. Update failed.');
             }
           }
           continue;
         }
 
         if (goalStr.trim() === '/model') {
-          const s = clackSpinner();
-          s.start('Fetching available models from Groq...');
+          const s = startAgentSpinner('Fetching available models from Groq...');
           const models = await fetchModels(apiKey!);
-          s.stop(`Found ${models.length} models.`);
+          s.succeed(`Found ${models.length} models.`);
 
           if (models.length === 0) {
-            note(pc.red('No models available.'));
+            console.log(colors.mutedGray('  * No models available.'));
             continue;
           }
 
           const modelChoice = await select({
-            message: 'Select an AI model:',
+            message: `${colors.brightBlue('│')} Select an AI model:`,
             options: models.map(m => ({
               value: m.id,
               label: m.id,
@@ -171,21 +183,26 @@ program
             config.selectedModel = selectedModel;
             await writeConfig(config);
             agent = new AIAgent(apiKey!, selectedModel);
-            note(pc.green(`Model switched to: ${selectedModel}`));
+            console.log(`\n  ${colors.brightBlue('▣')}  ${colors.white('Model switched to:')} ${colors.brightBlue(selectedModel)}\n`);
           }
           continue;
         }
 
         if (!goalStr.trim()) continue;
 
+        // Removed redundant header echoing
+
         agent.startSession(sysInfo, goalStr);
         let currentMessage = `Please suggest the first step to achieve: ${goalStr}`;
         let isComplete = false;
+        let stepCount = 0;
 
         await addActivity(`Goal: ${goalStr}`);
 
         while (!isComplete) {
-          const s = startForgingSpinner();
+          stepCount++;
+          const spinnerStatus = stepCount === 1 ? 'Formulating plan...' : 'Analyzing output...';
+          const s = startAgentSpinner(spinnerStatus);
           
           let response;
           try {
@@ -195,55 +212,54 @@ program
             console.error(pc.red(error.message));
             break;
           }
-          s.succeed();
+          s.stop();
 
           if (response.thinking) {
             await displayThinking(response.thinking);
           }
 
           if (response.explanation) {
-            await typewriterPrint(response.explanation);
+            displayNarrative(response.explanation);
           }
           
           if (response.answer) {
-            await displayAnswer(response.answer);
+            await displayAnswer(response.answer, selectedModel);
           }
 
           if (response.isComplete) {
             isComplete = true;
-            await shimmerText('✨ Goal achieved successfully!');
+            await displayGoalAchieved('Goal achieved successfully');
             break;
           }
 
           if (response.command) {
-            displayCommandBlock(response.command);
+            displayCommandAction(response.command);
             
             // Execution Gate
             let shouldRun;
             if (response.is_destructive) {
-              // Terminal bell \x07
               process.stdout.write('\x07');
-              console.log(pc.bgRed(pc.white(' ⚠ DANGER: This command modifies system files. ')));
+              console.log(`\n  \x1b[48;2;180;30;30m\x1b[37m ⚠ DANGER: This command modifies system files. \x1b[0m\n`);
               shouldRun = await confirm({
-                message: pc.red('Execute this destructive command?'),
+                message: `Execute this destructive command?`,
                 initialValue: false,
               });
             } else {
               shouldRun = await confirm({
-                message: 'Execute this command?',
+                message: `Execute this command?`,
                 initialValue: true,
               });
             }
 
             if (!shouldRun || isCancel(shouldRun)) {
-              note(pc.yellow('Operation cancelled by user.'));
+              console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('* Operation cancelled by user.')}`);
               break;
             }
 
             const result = await executeCommand(response.command);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('(exit code ' + result.exitCode + ')')}`);
 
             await addActivity(`Ran: ${response.command}`);
-            // Update activities in memory to immediately reflect on next clear
             config = await readConfig(); 
 
             let output = result.stdout;

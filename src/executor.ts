@@ -28,9 +28,8 @@ export async function executeCommand(command: string): Promise<CommandResult> {
     let stdout = '';
     let stderr = '';
     
-    console.log(pc.dim('\n  Terminal Output:'));
+    console.log(pc.gray('\n  → Execution Output:'));
     
-    // To make output stream nicely in the UI, we'll prefix lines
     let stdoutBuffer = '';
     let stderrBuffer = '';
 
@@ -38,12 +37,11 @@ export async function executeCommand(command: string): Promise<CommandResult> {
       const chunk = data.toString();
       stdout += chunk;
       
-      // Stream with border
       const lines = chunk.split('\n');
       for (let i = 0; i < lines.length; i++) {
         stdoutBuffer += lines[i];
         if (i < lines.length - 1) {
-          process.stdout.write(pc.dim('  │ ') + pc.dim(stdoutBuffer) + '\n');
+          process.stdout.write(pc.gray('    │ ') + stdoutBuffer + '\n');
           stdoutBuffer = '';
         }
       }
@@ -57,7 +55,7 @@ export async function executeCommand(command: string): Promise<CommandResult> {
       for (let i = 0; i < lines.length; i++) {
         stderrBuffer += lines[i];
         if (i < lines.length - 1) {
-          process.stderr.write(pc.red('  │ ') + pc.red(stderrBuffer) + '\n');
+          process.stderr.write(pc.red('    │ ') + pc.red(stderrBuffer) + '\n');
           stderrBuffer = '';
         }
       }
@@ -65,8 +63,8 @@ export async function executeCommand(command: string): Promise<CommandResult> {
 
     child.on('close', (code) => {
       // Flush remaining buffers
-      if (stdoutBuffer) process.stdout.write(pc.dim('  │ ') + pc.dim(stdoutBuffer) + '\n');
-      if (stderrBuffer) process.stderr.write(pc.red('  │ ') + pc.red(stderrBuffer) + '\n');
+      if (stdoutBuffer) process.stdout.write(pc.gray('    │ ') + stdoutBuffer + '\n');
+      if (stderrBuffer) process.stderr.write(pc.red('    │ ') + pc.red(stderrBuffer) + '\n');
       
       resolve({
         stdout,
