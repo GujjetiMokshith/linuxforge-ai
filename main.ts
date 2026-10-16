@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { exec } from 'child_process';
 import { getSystemInfo } from './src/system.js';
 import {
   renderDashboard,
@@ -25,6 +26,15 @@ import { readConfig, writeConfig, addActivity } from './src/config.js';
 import { text, isCancel, cancel, confirm, select } from '@clack/prompts';
 import pc from 'picocolors';
 
+const GROQ_KEY_URL = 'https://console.groq.com/keys';
+
+function openUrl(url: string): void {
+  const cmd = process.platform === 'win32' ? `start "" "${url}"`
+    : process.platform === 'darwin' ? `open "${url}"`
+    : `xdg-open "${url}"`;
+  exec(cmd, () => {}); // fire-and-forget
+}
+
 const program = new Command();
 
 program
@@ -40,8 +50,27 @@ program
       // ── Key Verification Loop ──
       while (true) {
         if (!apiKey) {
+          const action = await select({
+            message: `  ${colors.brightBlue('│')} Groq API Key required`,
+            options: [
+              { value: 'open', label: `${colors.brightBlue('→')} Open browser to get a free API key  ${colors.mutedGray(`(${GROQ_KEY_URL})`)}` },
+              { value: 'enter', label: `${colors.boldWhite('⌨')} I already have a key — let me paste it` },
+            ],
+          });
+
+          if (isCancel(action)) {
+            console.log(colors.mutedGray('\n  * Operation cancelled.'));
+            process.exit(0);
+          }
+
+          if (action === 'open') {
+            openUrl(GROQ_KEY_URL);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('Opened')} ${colors.brightBlue(GROQ_KEY_URL)} ${colors.mutedGray('in your browser.')}`);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('Create a key, then paste it below.')}\n`);
+          }
+
           const inputKey = await text({
-            message: `  ${colors.brightBlue('│')} Please enter your Groq API Key:`,
+            message: `  ${colors.brightBlue('│')} Paste your Groq API Key:`,
             placeholder: 'gsk_...',
           });
 
@@ -137,8 +166,24 @@ program
         }
         
         if (goalStr.trim() === '/key') {
+          const action = await select({
+            message: `  ${colors.brightBlue('│')} Update Groq API Key`,
+            options: [
+              { value: 'open', label: `${colors.brightBlue('→')} Open browser to get a new API key  ${colors.mutedGray(`(${GROQ_KEY_URL})`)}` },
+              { value: 'enter', label: `${colors.boldWhite('⌨')} I already have a key — let me paste it` },
+            ],
+          });
+
+          if (isCancel(action)) { continue; }
+
+          if (action === 'open') {
+            openUrl(GROQ_KEY_URL);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('Opened')} ${colors.brightBlue(GROQ_KEY_URL)} ${colors.mutedGray('in your browser.')}`);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('Create a key, then paste it below.')}\n`);
+          }
+
           const inputKey = await text({
-            message: `  ${colors.brightBlue('│')} Please enter your new Groq API Key:`,
+            message: `  ${colors.brightBlue('│')} Paste your new Groq API Key:`,
             placeholder: 'gsk_...',
           });
           
