@@ -2,6 +2,106 @@ import Groq from 'groq-sdk';
 import { SystemInfo } from './system.js';
 import * as os from 'os';
 
+/**
+ * Represents a user-friendly API error with actionable guidance.
+ */
+export class LinuxForgeAPIError extends Error {
+  public readonly hint: string;
+  public readonly isRetryable: boolean;
+  public readonly isModelIssue: boolean;
+
+  constructor(message: string, hint: string, options: { isRetryable?: boolean; isModelIssue?: boolean } = {}) {
+    super(message);
+    this.name = 'LinuxForgeAPIError';
+    this.hint = hint;
+    this.isRetryable = options.isRetryable ?? false;
+    this.isModelIssue = options.isModelIssue ?? false;
+  }
+}
+
+/**
+ * Classifies raw API errors into user-friendly LinuxForgeAPIError instances.
+ */
+export function classifyAPIError(error: any, model: string): LinuxForgeAPIError {
+  const rawMessage = error?.message || error?.toString() || 'Unknown error';
+  const status = error?.status || error?.statusCode || error?.response?.status;
+  const errorBody = error?.error || error?.response?.data?.error || {};
+  const errorCode = errorBody?.code || '';
+  const errorMessage = errorBody?.message || rawMessage;
+
+  // ── Tool-use constraint violation (the exact error from the issue) ──
+  if (errorCode === 'tool_use_failed' || errorMessage.includes('Tool choice is none, but model called a tool')) {
+    return new LinuxForgeAPIError(
+      `Model "${model}" is incompatible — it ignores tool-use constraints.`,
+      'Switch to a different model with /model (e.g. llama-3.3-70b-versatile).',
+      { isRetryable: false, isModelIssue: true }
+    );
+  }
+
+  // ── Rate limiting ──
+  if (status === 429 || errorCode === 'rate_limit_exceeded' || errorMessage.includes('rate limit')) {
+    return new LinuxForgeAPIError(
+      'Rate limit exceeded.',
+      'Wait a moment and try again, or switch to a less busy model with /model.',
+      { isRetryable: true }
+    );
+  }
+
+  // ── Authentication / authorization ──
+  if (status === 401 || status === 403 || errorCode === 'invalid_api_key' || errorMessage.includes('Invalid API Key')) {
+    return new LinuxForgeAPIError(
+      'API key is invalid or expired.',
+      'Update your key with /key.',
+      { isRetryable: false }
+    );
+  }
+
+  // ── Model not found / not available ──
+  if (status === 404 || errorCode === 'model_not_found' || errorMessage.includes('does not exist')) {
+    return new LinuxForgeAPIError(
+      `Model "${model}" is not available on Groq.`,
+      'Switch to an available model with /model.',
+      { isRetryable: false, isModelIssue: true }
+    );
+  }
+
+  // ── Context length exceeded ──
+  if (errorCode === 'context_length_exceeded' || errorMessage.includes('context length') || errorMessage.includes('maximum.*tokens')) {
+    return new LinuxForgeAPIError(
+      'Conversation too long for this model\'s context window.',
+      'Start a new goal or switch to a model with a larger context with /model.',
+      { isRetryable: false }
+    );
+  }
+
+  // ── Server-side errors ──
+  if (status && status >= 500) {
+    return new LinuxForgeAPIError(
+      'Groq servers are experiencing issues.',
+      'Wait a moment and try again.',
+      { isRetryable: true }
+    );
+  }
+
+  // ── Network / connectivity errors ──
+  if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || error?.code === 'ETIMEDOUT' || errorMessage.includes('fetch failed')) {
+    return new LinuxForgeAPIError(
+      'Cannot connect to Groq API.',
+      'Check your internet connection and try again.',
+      { isRetryable: true }
+    );
+  }
+
+  // ── Catch-all for unrecognized errors ──
+  // Extract just the meaningful part, not the full JSON dump
+  const cleanMessage = errorMessage.length > 200 ? errorMessage.substring(0, 200) + '…' : errorMessage;
+  return new LinuxForgeAPIError(
+    `API error: ${cleanMessage}`,
+    'Try again, or switch model with /model. If this persists, check https://status.groq.com.',
+    { isRetryable: true }
+  );
+}
+
 export interface AIResponse {
   explanation: string | null;
   command: string | null;
@@ -88,11 +188,26 @@ CRITICAL RULES — YOU MUST FOLLOW THESE:
       content: message
     });
 
-    const response = await this.groq.chat.completions.create({
-      model: this.model,
-      messages: this.messages,
-      response_format: { type: 'json_object' }
-    });
+    let response;
+    try {
+      response = await this.groq.chat.completions.create({
+        model: this.model,
+        messages: this.messages,
+        response_format: { type: 'json_object' }
+      });
+    } catch (error: any) {
+      // Some models (e.g. openai/gpt-oss-20b) don't support json_object format on Groq.
+      // Retry without response_format and parse JSON from the raw text.
+      const errMsg = error?.error?.message || error?.message || '';
+      if (errMsg.includes('Tool choice is none') || error?.error?.code === 'tool_use_failed') {
+        response = await this.groq.chat.completions.create({
+          model: this.model,
+          messages: this.messages,
+        });
+      } else {
+        throw error;
+      }
+    }
 
     const text = response.choices[0]?.message?.content || '{}';
     this.messages.push({

@@ -49,7 +49,7 @@ export function renderDashboard(info: SystemInfo, activities: Activity[], model?
   const RIGHT_WIDTH = 43; // 80 - 34 - 3 (borders)
   
   // Dashboard Title
-  const title = ` linuxforge v2.2.0 `;
+  const title = ` linuxforge v2.3.0 `;
   const topBorder = colors.brightBlue(`╭${'─'.repeat(3)}${colors.boldWhite(title)}${colors.brightBlue('─'.repeat(TOTAL_WIDTH - 5 - stripAnsi(title).length))}╮`);
   const bottomBorder = colors.brightBlue(`╰${'─'.repeat(TOTAL_WIDTH - 2)}╯`);
 

@@ -20,7 +20,7 @@ import {
   startAgentSpinner,
   colors
 } from './src/ui.js';
-import { AIAgent, verifyKey, fetchModels } from './src/ai.js';
+import { AIAgent, verifyKey, fetchModels, classifyAPIError } from './src/ai.js';
 import { executeCommand } from './src/executor.js';
 import { readConfig, writeConfig, addActivity } from './src/config.js';
 import { text, isCancel, cancel, confirm, select } from '@clack/prompts';
@@ -253,8 +253,12 @@ program
           try {
             response = await agent.sendMessage(currentMessage);
           } catch (error: any) {
-            s.fail('Failed to get response from AI');
-            console.error(pc.red(error.message));
+            const classified = classifyAPIError(error, selectedModel!);
+            s.fail(classified.message);
+            console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray(classified.hint)}`);
+            if (classified.isModelIssue) {
+              console.log(`  ${colors.brightBlue('│')} ${colors.mutedGray('Current model:')} ${colors.boldWhite(selectedModel!)}\n`);
+            }
             break;
           }
           s.stop();
