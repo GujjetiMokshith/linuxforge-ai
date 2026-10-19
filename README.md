@@ -1,68 +1,135 @@
 <div align="center">
-  <h1>LinuxForge AI 🚀</h1>
-  <p><strong>Your Intelligent, Kinetic Terminal Assistant for Linux</strong></p>
-  
-  [![npm version](https://img.shields.io/npm/v/linuxforge-ai.svg?style=flat-square)](https://www.npmjs.com/package/linuxforge-ai)
-  [![npm downloads](https://img.shields.io/npm/dt/linuxforge-ai.svg?style=flat-square)](https://www.npmjs.com/package/linuxforge-ai)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
+# LinuxForge AI
+
+**AI-powered terminal agent that turns plain English into executed Linux commands.**
+
+[![npm version](https://img.shields.io/npm/v/linuxforge-ai.svg?style=flat-square&color=3B82F6)](https://www.npmjs.com/package/linuxforge-ai)
+[![npm downloads](https://img.shields.io/npm/dt/linuxforge-ai.svg?style=flat-square&color=3B82F6)](https://www.npmjs.com/package/linuxforge-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
 </div>
-
-LinuxForge is an expert AI assistant framework designed specifically to make managing Linux easier. It operates directly in your terminal, transforming natural language goals into precise bash commands, executing them, and automatically analyzing the output in a continuous loop until your goal is fully achieved.
-
-Featuring a gorgeous, kinetic Terminal User Interface (TUI) powered by **Groq** — the world's fastest AI inference platform.
 
 ---
 
-## ✨ Features
-
-- **Continuous REPL Loop**: Talk to LinuxForge interactively. It proposes commands, runs them, and reads the output automatically.
-- **Model Selection**: Choose from all available Groq models on first run. Switch models anytime with `/model`.
-- **Kinetic "Magical" TUI**: 
-  - 🔄 **Multi-stage Forging Spinner**: Watch the AI "Smelt Logic" and "Forge Commands" in real-time.
-  - ⌨️ **Typewriter Stream Reveal**: AI explanations stream organically character-by-character.
-  - 🌈 **Syntax Highlighting**: Command blocks are beautifully syntax-highlighted and visually isolated.
-  - 🎇 **Pulse Animations**: Shimmering terminal animations celebrate your completed goals.
-- **Safe Execution Gate**: The AI actively evaluates commands. If a command is flagged as destructive (e.g., modifies system files, deletes data), the interface alerts you with a terminal bell and a pulsing red `⚠ DANGER` warning.
-- **Conversational Intelligence**: Ask it direct questions (e.g. "what is the best Linux distro?") and it will answer cleanly without proposing shell commands.
-- **State Persistence**: Your API key, selected model, and activity history are saved locally to `~/.config/linuxforge/config.json`.
-
-## 📦 Installation
-
-Install globally via npm:
+## Install
 
 ```bash
 npm install -g linuxforge-ai
 ```
 
-## 🔑 Setup
-
-You'll need a free **Groq API Key**:
-1. Go to [console.groq.com](https://console.groq.com) and sign up
-2. Create an API key (starts with `gsk_...`)
-3. Run `linuxforge` — it will prompt you for the key on first launch
-
-Or set it as an environment variable:
-```bash
-export GROQ_API_KEY=gsk_your_key_here
-```
-
-## 🚀 Usage
-
-Start the REPL loop simply by running:
+Then run it:
 
 ```bash
 linuxforge
 ```
 
-### Commands inside LinuxForge:
-- **Natural Language**: Just type what you want to do (e.g. `install spotify`, `update my packages`, `what is 5+5`).
-- `/model`: Switch to a different AI model.
-- `/key`: Update your Groq API Key on the fly.
-- `/clear`: Clear the terminal and redraw the dashboard.
-- `/exit`: Exit the application and restore your terminal cursor.
+That's it. On first launch it will walk you through API key setup and model selection.
 
-## 🛠️ Configuration
-On your first run, LinuxForge will prompt you for a **Groq API Key** and let you choose from the available models. Both are validated, persisted, and can be changed at any time.
+---
 
-## 📝 License
-MIT License. Created by Gujjeti Mokshith.
+## Quick Start
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   $ npm i -g linuxforge-ai                              │
+│   $ linuxforge                                          │
+│                                                         │
+│   │ Groq API Key required                               │
+│     → Open browser to get a free API key                │
+│     ⌨ I already have a key — let me paste it            │
+│                                                         │
+│   │ Paste your Groq API Key: gsk_...                    │
+│   ✔ API Key verified successfully.                      │
+│                                                         │
+│   │ What do you want to do?                             │
+│   > install htop and check system usage                 │
+│                                                         │
+│   I'll install htop and display your system stats.      │
+│   * sudo apt install htop -y                            │
+│   * htop --batch --max-iterations=1                     │
+│   ✔ Goal achieved.                                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+> **Free API key** — LinuxForge runs on [Groq](https://console.groq.com/keys) (the fastest inference engine). Creating a key takes 30 seconds and costs nothing.
+
+---
+
+## Commands
+
+Inside the LinuxForge REPL, type plain English or use slash commands:
+
+```
+  linuxforge                       launch the agent
+```
+
+| Command  | What it does                                |
+|----------|---------------------------------------------|
+| `hello`  | Just talk — ask anything in natural language |
+| `/model` | Switch to a different Groq model             |
+| `/key`   | Update your API key (with browser shortcut)  |
+| `/clear` | Clear screen and redraw the dashboard        |
+| `/exit`  | Quit                                         |
+
+---
+
+## How It Works
+
+```
+  You type a goal in plain English
+        │
+        ▼
+  LinuxForge reasons about it
+        │
+        ▼
+  Proposes a bash command
+        │
+        ▼
+  You approve → it executes
+        │
+        ▼
+  Reads output → loops until done
+        │
+        ▼
+  ✔ Goal achieved
+```
+
+- **Goal → Command → Execute → Analyze → Repeat** until the task is complete.
+- Destructive commands trigger a `⚠ DANGER` safety gate with a terminal bell before execution.
+- Direct questions (e.g. *"what's the best distro?"*) get answered without running commands.
+
+---
+
+## Features
+
+- **Agentic loop** — proposes commands, executes, reads output, iterates automatically
+- **Safety gate** — destructive commands get flagged with `⚠ DANGER` before confirmation
+- **Model picker** — choose from all available Groq models, switch anytime with `/model`
+- **Browser shortcut** — `/key` opens `console.groq.com/keys` directly in your browser
+- **Persistent config** — API key, model, and activity history saved to `~/.config/linuxforge/config.json`
+- **Clean TUI** — monochromatic + bright blue accent, no clutter, no gimmicks
+
+---
+
+## Configuration
+
+LinuxForge stores its config at:
+
+```
+~/.config/linuxforge/config.json
+```
+
+You can also set the key via environment variable:
+
+```bash
+export GROQ_API_KEY=gsk_your_key_here
+```
+
+---
+
+## License
+
+MIT — Created by [Gujjeti Mokshith](https://github.com/GujjetiMokshith)
